@@ -1,0 +1,76 @@
+import os
+import hashlib
+import argparse
+import json
+
+BASELINE_FILE = "file_hashes.json"
+
+def compute_hash(file_path):
+    sha256_hash = hashlib.sha256()
+    try:
+        with open(file_path, "rb") as f:
+            for byte_block in iter(lambda: f.read(4096), b""):
+                sha256_hash.update(byte_block)
+        return sha256_hash.hexdigest()
+    except Exception as e:
+        print(f"[!] Error reading {file_path}: {e}")
+        return None
+
+def create_baseline(directory):
+    file_hashes = {}
+    for root, _, files in os.walk(directory):
+        for fname in files:
+            path = os.path.join(root, fname)
+            hash_val = compute_hash(path)
+            if hash_val:
+                file_hashes[path] = hash_val
+
+    with open(BASELINE_FILE, "w") as f:
+        json.dump(file_hashes, f, indent=4)
+    print(f"[+] Baseline created and saved to {BASELINE_FILE}")
+
+def check_integrity(directory):
+    try:
+        with open(BASELINE_FILE, "r") as f:
+            baseline_hashes = json.load(f)
+    except FileNotFoundError:
+        print("[!] Baseline file not found. Run with --baseline first.")
+        return
+
+    current_hashes = {}
+    for root, _, files in os.walk(directory):
+        for fname in files:
+            path = os.path.join(root, fname)
+            hash_val = compute_hash(path)
+            if hash_val:
+                current_hashes[path] = hash_val
+
+    # Detect changes
+    print("\n[*] Checking for file changes...\n")
+
+    for path, old_hash in baseline_hashes.items():
+        if path not in current_hashes:
+            print(f"[-] Deleted: {path}")
+        elif current_hashes[path] != old_hash:
+            print(f"[!] Modified: {path}")
+
+    for path in current_hashes:
+        if path not in baseline_hashes:
+            print(f"[+] New file: {path}")
+
+    print("\n[✓] Check complete.")
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="File Integrity Checker using SHA256 hashes.")
+    parser.add_argument("directory", help="Directory to monitor")
+    parser.add_argument("--baseline", action="store_true", help="Create hash baseline")
+    parser.add_argument("--check", action="store_true", help="Check file integrity")
+
+    args = parser.parse_args()
+
+    if args.baseline:
+        create_baseline(args.directory)
+    elif args.check:
+        check_integrity(args.directory)
+    else:
+        print("Use --baseline to create a baseline or --check to check integrity.")
