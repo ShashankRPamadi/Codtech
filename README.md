@@ -59,4 +59,14 @@ NOTE: All tools are for educational use only and should be used in authorized en
 
 
 
+images/file_integrity_output.png
 
+images/web_vuln_scanner_output.png
+
+images/port_scanner_output.png
+
+images/brute_forcer_output.png
+
+images/encryption_output.png
+
+images/decryption_output.png
