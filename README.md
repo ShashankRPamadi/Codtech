@@ -58,5 +58,5 @@ Along the way, I improved my Python skills and gained better understanding of ho
 NOTE: All tools are for educational use only and should be used in authorized environments.
 
 
-![Web Vulnerability Scanner Output](https://i.imgur.com/OHRkW0s.png)
+
 
