@@ -1,0 +1,82 @@
+import os
+import base64
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
+from cryptography.hazmat.backends import default_backend
+
+# Derive key from password using PBKDF2HMAC
+def derive_key(password, salt):
+    kdf = PBKDF2HMAC(
+        algorithm=hashes.SHA256(),
+        length=32,  # AES-256
+        salt=salt,
+        iterations=100000,
+        backend=default_backend()
+    )
+    return kdf.derive(password.encode())
+
+# Encrypt a file
+def encrypt_file(file_path, password):
+    salt = os.urandom(16)
+    key = derive_key(password, salt)
+    iv = os.urandom(16)
+
+    with open(file_path, 'rb') as f:
+        data = f.read()
+
+    # Padding for block size
+    pad_len = 16 - len(data) % 16
+    data += bytes([pad_len] * pad_len)
+
+    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+    encryptor = cipher.encryptor()
+    encrypted = encryptor.update(data) + encryptor.finalize()
+
+    encrypted_path = file_path + ".enc"
+    with open(encrypted_path, 'wb') as f:
+        f.write(salt + iv + encrypted)
+
+    print(f"[+] File encrypted successfully! Saved as: {encrypted_path}")
+
+# Decrypt a file
+def decrypt_file(file_path, password):
+    with open(file_path, 'rb') as f:
+        content = f.read()
+
+    salt = content[:16]
+    iv = content[16:32]
+    encrypted_data = content[32:]
+
+    key = derive_key(password, salt)
+
+    cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=default_backend())
+    decryptor = cipher.decryptor()
+    decrypted = decryptor.update(encrypted_data) + decryptor.finalize()
+
+    # Remove padding
+    pad_len = decrypted[-1]
+    decrypted = decrypted[:-pad_len]
+
+    decrypted_path = file_path.replace(".enc", ".dec")
+    with open(decrypted_path, 'wb') as f:
+        f.write(decrypted)
+
+    print(f"[✓] File decrypted successfully! Saved as: {decrypted_path}")
+
+# CLI Interface
+if __name__ == "__main__":
+    print("🔐 AES-256 Encryption Tool")
+    print("1. Encrypt a File")
+    print("2. Decrypt a File")
+    choice = input("Enter your choice (1/2): ")
+
+    file_path = input("Enter full path of the file: ")
+    password = input("Enter password: ")
+
+    if choice == "1":
+        encrypt_file(file_path, password)
+    elif choice == "2":
+        decrypt_file(file_path, password)
+    else:
+        print("Invalid choice.")
